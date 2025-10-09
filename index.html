@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>倒數計時器</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>倒數計時器</h1>
+        
+        <div class="settings">
+            <div class="input-group">
+                <label for="totalTime">倒數時間 (秒):</label>
+                <input type="number" id="totalTime" min="1" value="60">
+            </div>
+            
+            <div class="input-group">
+                <label for="notifyTime">提醒時間 (秒):</label>
+                <input type="number" id="notifyTime" min="1" value="10">
+            </div>
+        </div>
+
+        <div class="timer-display">
+            <div class="time" id="timeDisplay">00:00</div>
+            <div class="progress-bar">
+                <div class="progress" id="progress"></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="startBtn" class="btn start">開始</button>
+            <button id="pauseBtn" class="btn pause" disabled>暫停</button>
+            <button id="resetBtn" class="btn reset">重置</button>
+        </div>
+
+        <div class="status" id="status">準備就緒</div>
+    </div>
+
+    <audio id="notificationSound" preload="auto">
+        <source src="bell-sound.mp3" type="audio/mpeg">
+        您的瀏覽器不支援音效播放
+    </audio>
+
+    <script src="audio-generator.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
