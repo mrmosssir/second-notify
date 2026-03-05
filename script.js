@@ -1,67 +1,49 @@
-class CountdownTimer {
-    constructor() {
-        this.totalTime = 60; // 總倒數時間（秒）
-        this.notifyTime = 10; // 提醒時間（秒）
-        this.currentTime = this.totalTime; // 當前時間
-        this.isRunning = false; // 是否正在運行
-        this.isPaused = false; // 是否暫停
-        this.timer = null; // 計時器
-        this.hasNotified = false; // 是否已經通知過
+// 基礎計時器類別
+class Timer {
+    constructor(config) {
+        this.name = config.name;
+        this.totalTime = config.totalTime || 60;
+        this.notifyTime = config.notifyTime || 10;
+        this.notifyText = config.notifyText || "";
+        this.currentTime = this.totalTime;
+        this.isRunning = false;
+        this.isPaused = false;
+        this.hasNotified = false;
+        this.startTime = null;
         
-        this.initElements();
+        // DOM 元素
+        this.elements = config.elements;
+        this.onNotify = config.onNotify; // 提醒時的回調函數
+        
         this.bindEvents();
         this.updateDisplay();
     }
     
-    initElements() {
-        // 獲取DOM元素
-        this.totalTimeInput = document.getElementById('totalTime');
-        this.notifyTimeInput = document.getElementById('notifyTime');
-        this.timeDisplay = document.getElementById('timeDisplay');
-        this.progressBar = document.getElementById('progress');
-        this.startBtn = document.getElementById('startBtn');
-        this.pauseBtn = document.getElementById('pauseBtn');
-        this.resetBtn = document.getElementById('resetBtn');
-        this.status = document.getElementById('status');
-        this.audio = document.getElementById('notificationSound');
-        
-        // 設置初始值
-        this.totalTimeInput.value = this.totalTime;
-        this.notifyTimeInput.value = this.notifyTime;
-    }
-    
     bindEvents() {
-        // 綁定按鈕事件
-        this.startBtn.addEventListener('click', () => this.start());
-        this.pauseBtn.addEventListener('click', () => this.pause());
-        this.resetBtn.addEventListener('click', () => this.reset());
+        if (this.elements.startBtn) this.elements.startBtn.addEventListener('click', () => this.start());
+        if (this.elements.pauseBtn) this.elements.pauseBtn.addEventListener('click', () => this.pause());
+        if (this.elements.resetBtn) this.elements.resetBtn.addEventListener('click', () => this.reset());
         
-        // 綁定輸入變更事件
-        this.totalTimeInput.addEventListener('change', () => this.updateSettings());
-        this.notifyTimeInput.addEventListener('change', () => this.updateSettings());
+        if (this.elements.totalInput) {
+            this.elements.totalInput.addEventListener('change', () => {
+                if (!this.isRunning) {
+                    this.totalTime = parseInt(this.elements.totalInput.value) || 60;
+                    this.currentTime = this.totalTime;
+                    this.updateDisplay();
+                }
+            });
+        }
         
-        // 防止輸入負數
-        this.totalTimeInput.addEventListener('input', (e) => {
-            if (e.target.value < 1) e.target.value = 1;
-        });
-        this.notifyTimeInput.addEventListener('input', (e) => {
-            if (e.target.value < 1) e.target.value = 1;
-        });
-    }
-    
-    updateSettings() {
-        if (!this.isRunning) {
-            this.totalTime = parseInt(this.totalTimeInput.value) || 60;
-            this.notifyTime = parseInt(this.notifyTimeInput.value) || 10;
-            
-            // 確保提醒時間不超過總時間
-            if (this.notifyTime >= this.totalTime) {
-                this.notifyTime = Math.max(1, this.totalTime - 1);
-                this.notifyTimeInput.value = this.notifyTime;
-            }
-            
-            this.currentTime = this.totalTime;
-            this.updateDisplay();
+        if (this.elements.notifyInput) {
+            this.elements.notifyInput.addEventListener('change', () => {
+                this.notifyTime = parseInt(this.elements.notifyInput.value) || 0;
+            });
+        }
+        
+        if (this.elements.textInput) {
+            this.elements.textInput.addEventListener('change', () => {
+                this.notifyText = this.elements.textInput.value;
+            });
         }
     }
     
@@ -69,18 +51,10 @@ class CountdownTimer {
         if (!this.isRunning || this.isPaused) {
             this.isRunning = true;
             this.isPaused = false;
-            this.hasNotified = false;
+            this.startTime = Date.now() - ((this.totalTime - this.currentTime) * 1000);
             
-            this.startBtn.disabled = true;
-            this.pauseBtn.disabled = false;
-            this.totalTimeInput.disabled = true;
-            this.notifyTimeInput.disabled = true;
-            
-            this.updateStatus('running', '倒數進行中...');
-            
-            this.timer = setInterval(() => {
-                this.tick();
-            }, 1000);
+            this.updateControls();
+            this.updateStatus('running', '執行中');
         }
     }
     
@@ -88,16 +62,8 @@ class CountdownTimer {
         if (this.isRunning && !this.isPaused) {
             this.isPaused = true;
             this.isRunning = false;
-            
-            this.startBtn.disabled = false;
-            this.pauseBtn.disabled = true;
-            
+            this.updateControls();
             this.updateStatus('paused', '已暫停');
-            
-            if (this.timer) {
-                clearInterval(this.timer);
-                this.timer = null;
-            }
         }
     }
     
@@ -106,47 +72,39 @@ class CountdownTimer {
         this.isPaused = false;
         this.hasNotified = false;
         this.currentTime = this.totalTime;
+        this.startTime = null;
         
-        this.startBtn.disabled = false;
-        this.pauseBtn.disabled = true;
-        this.totalTimeInput.disabled = false;
-        this.notifyTimeInput.disabled = false;
-        
+        this.updateControls();
         this.updateStatus('', '準備就緒');
-        this.timeDisplay.classList.remove('warning');
-        
-        if (this.timer) {
-            clearInterval(this.timer);
-            this.timer = null;
-        }
-        
+        if (this.elements.display) this.elements.display.classList.remove('warning');
         this.updateDisplay();
     }
     
     tick() {
-        this.currentTime--;
+        if (!this.isRunning || !this.startTime) return;
+
+        const elapsedSeconds = Math.floor((Date.now() - this.startTime) / 1000);
+        const newCurrentTime = this.totalTime - elapsedSeconds;
+
+        if (newCurrentTime === this.currentTime && newCurrentTime > 0) return;
         
-        // 檢查是否到達提醒時間
-        if (this.currentTime === this.notifyTime && !this.hasNotified) {
-            this.playNotificationSound();
+        this.currentTime = newCurrentTime;
+        
+        // 提醒邏輯
+        if (this.currentTime <= this.notifyTime && !this.hasNotified && this.currentTime > 0) {
+            if (this.onNotify) this.onNotify(this.notifyText);
             this.hasNotified = true;
-            this.timeDisplay.classList.add('warning');
-            this.updateStatus('notification', `⚠️ 還剩 ${this.notifyTime} 秒！`);
+            if (this.elements.display) this.elements.display.classList.add('warning');
+            this.updateStatus('notification', '提醒中');
         }
         
-        // 檢查是否倒數結束
+        // 循環邏輯
         if (this.currentTime <= 0) {
-            this.currentTime = this.totalTime; // 直接重置時間
+            this.startTime = Date.now();
+            this.currentTime = this.totalTime;
             this.hasNotified = false;
-            this.timeDisplay.classList.remove('warning');
-            this.updateStatus('completed', '時間到！重新開始...');
+            if (this.elements.display) this.elements.display.classList.remove('warning');
             this.updateDisplay();
-            
-            // 短暫顯示完成狀態後繼續
-            setTimeout(() => {
-                this.updateStatus('running', '倒數進行中...');
-            }, 500);
-            
             return;
         }
         
@@ -154,77 +112,183 @@ class CountdownTimer {
     }
     
     updateDisplay() {
-        // 更新時間顯示
-        const minutes = Math.floor(this.currentTime / 60);
-        const seconds = this.currentTime % 60;
-        this.timeDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        const mins = Math.floor(Math.max(0, this.currentTime) / 60);
+        const secs = Math.max(0, this.currentTime) % 60;
+        const timeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         
-        // 更新進度條
-        const progress = ((this.totalTime - this.currentTime) / this.totalTime) * 100;
-        this.progressBar.style.width = `${progress}%`;
+        if (this.elements.display) this.elements.display.textContent = timeStr;
+        
+        if (this.elements.progress) {
+            const percent = ((this.totalTime - this.currentTime) / this.totalTime) * 100;
+            this.elements.progress.style.width = `${percent}%`;
+        }
+    }
+    
+    updateControls() {
+        if (this.elements.startBtn) this.elements.startBtn.disabled = this.isRunning;
+        if (this.elements.pauseBtn) this.elements.pauseBtn.disabled = !this.isRunning;
+        if (this.elements.totalInput) this.elements.totalInput.disabled = this.isRunning;
     }
     
     updateStatus(className, text) {
-        this.status.className = 'status' + (className ? ` ${className}` : '');
-        this.status.textContent = text;
-    }
-    
-    async playNotificationSound() {
-        try {
-            // 播放3次鈴聲，每次間隔0.8秒
-            for (let i = 0; i < 3; i++) {
-                // 重置音效到開始位置
-                this.audio.currentTime = 0;
-                
-                // 播放音效
-                await this.audio.play();
-                
-                // 等待0.8秒播放完一次鈴聲後再播放下一次
-                await new Promise(resolve => setTimeout(resolve, 800));
-                
-                // 暫停音效準備下次播放
-                this.audio.pause();
-                
-                // 如果不是最後一次，等待0.2秒間隔
-                if (i < 2) {
-                    await new Promise(resolve => setTimeout(resolve, 200));
-                }
-            }
-            
-        } catch (error) {
-            console.log('無法播放音效:', error);
-            // 如果無法播放音效，使用瀏覽器原生通知
-            if ('Notification' in window) {
-                this.showBrowserNotification();
-            }
-        }
-    }
-    
-    async showBrowserNotification() {
-        // 請求通知權限
-        if (Notification.permission === 'default') {
-            await Notification.requestPermission();
-        }
-        
-        if (Notification.permission === 'granted') {
-            new Notification('倒數計時器提醒', {
-                body: `還剩 ${this.notifyTime} 秒！`,
-                icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="%23ff6b6b"/><text x="50" y="60" text-anchor="middle" fill="white" font-size="30">⏰</text></svg>'
-            });
+        if (this.elements.status) {
+            this.elements.status.className = 'status' + (className ? ` ${className}` : '');
+            this.statusText = text; // 僅內部紀錄，如果 UI 沒用到就算了
         }
     }
 }
 
-// 初始化計時器
-document.addEventListener('DOMContentLoaded', () => {
-    new CountdownTimer();
-});
-
-// 防止頁面離開時丟失狀態的警告
-window.addEventListener('beforeunload', (e) => {
-    const timer = document.querySelector('.status.running');
-    if (timer) {
-        e.preventDefault();
-        e.returnValue = '計時器正在運行中，確定要離開嗎？';
+// 應用程式管理類別
+class App {
+    constructor() {
+        this.timers = [];
+        this.worker = null;
+        this.audio = document.getElementById('notificationSound');
+        
+        this.initWorker();
+        this.initNavigation();
+        this.initFishTimer();
+        this.initKunlaTimers();
     }
+    
+    initWorker() {
+        try {
+            this.worker = new Worker('timer-worker.js');
+            this.worker.onmessage = (e) => {
+                if (e.data === 'tick') {
+                    this.timers.forEach(t => t.tick());
+                }
+            };
+            this.worker.postMessage({ action: 'start', interval: 200 });
+        } catch (error) {
+            console.error('Worker failed, using fallback');
+            setInterval(() => this.timers.forEach(t => t.tick()), 200);
+        }
+    }
+    
+    initNavigation() {
+        const fishLink = document.getElementById('fishTimerLink');
+        const kunlaLink = document.getElementById('kunlaTimerLink');
+        const fishPage = document.getElementById('fish-page');
+        const kunlaPage = document.getElementById('kunla-page');
+        
+        const switchPage = (pageId) => {
+            document.querySelectorAll('.page-container').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.sidebar-nav li').forEach(l => l.classList.remove('active'));
+            
+            if (pageId === 'fish') {
+                fishPage.classList.add('active');
+                fishLink.parentElement.classList.add('active');
+            } else {
+                kunlaPage.classList.add('active');
+                kunlaLink.parentElement.classList.add('active');
+            }
+        };
+        
+        fishLink.addEventListener('click', (e) => { e.preventDefault(); switchPage('fish'); });
+        kunlaLink.addEventListener('click', (e) => { e.preventDefault(); switchPage('kunla'); });
+        
+        // 啟用連結
+        kunlaLink.parentElement.classList.remove('disabled');
+    }
+    
+    initFishTimer() {
+        const fishTimer = new Timer({
+            name: "魚屋計時器",
+            totalTime: 60,
+            notifyTime: 10,
+            notifyText: "小怪",
+            elements: {
+                display: document.getElementById('timeDisplay'),
+                progress: document.getElementById('progress'),
+                totalInput: document.getElementById('totalTime'),
+                notifyInput: document.getElementById('notifyTime'),
+                textInput: document.getElementById('notifyText'),
+                startBtn: document.getElementById('startBtn'),
+                pauseBtn: document.getElementById('pauseBtn'),
+                resetBtn: document.getElementById('resetBtn'),
+                status: document.getElementById('status')
+            },
+            onNotify: (text) => this.playNotify(text)
+        });
+        this.timers.push(fishTimer);
+    }
+    
+    initKunlaTimers() {
+        const grid = document.getElementById('timers-grid');
+        const template = document.getElementById('timer-card-template');
+        
+        const config = [
+            { name: "時鐘倒數", total: 10, notify: 0, text: "" },
+            { name: "二樓小怪", total: 50, notify: 0, text: "二樓小怪生成" },
+            { name: "黑水", total: 70, notify: 10, text: "黑水剩餘10秒" }
+        ];
+        
+        config.forEach(item => {
+            const clone = template.content.cloneNode(true);
+            const card = clone.querySelector('.timer-card');
+            
+            // 填充內容
+            clone.querySelector('.timer-name').textContent = item.name;
+            const display = clone.querySelector('.timer-card-time');
+            const progress = clone.querySelector('.progress');
+            const totalInput = clone.querySelector('.input-total');
+            const notifyInput = clone.querySelector('.input-notify');
+            const textInput = clone.querySelector('.input-text');
+            const startBtn = clone.querySelector('.start');
+            const pauseBtn = clone.querySelector('.pause');
+            const resetBtn = clone.querySelector('.reset');
+            
+            totalInput.value = item.total;
+            notifyInput.value = item.notify;
+            textInput.value = item.text;
+            
+            grid.appendChild(clone);
+            
+            // 建立計時器實例 (注意：clone 之後要重新從 grid 抓取元素，因為原本的是 fragment)
+            const newCard = grid.lastElementChild;
+            const timer = new Timer({
+                name: item.name,
+                totalTime: item.total,
+                notifyTime: item.notify,
+                notifyText: item.text,
+                elements: {
+                    display: newCard.querySelector('.timer-card-time'),
+                    progress: newCard.querySelector('.progress'),
+                    totalInput: newCard.querySelector('.input-total'),
+                    notifyInput: newCard.querySelector('.input-notify'),
+                    textInput: newCard.querySelector('.input-text'),
+                    startBtn: newCard.querySelector('.start'),
+                    pauseBtn: newCard.querySelector('.pause'),
+                    resetBtn: newCard.querySelector('.reset'),
+                    status: null // 卡片暫不顯示詳細狀態文字
+                },
+                onNotify: (text) => this.playNotify(text)
+            });
+            this.timers.push(timer);
+        });
+    }
+    
+    async playNotify(text) {
+        if (text && 'speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'zh-TW';
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // 鈴聲
+        for (let i = 0; i < 2; i++) {
+            this.audio.currentTime = 0;
+            try { await this.audio.play(); } catch(e) {}
+            await new Promise(resolve => setTimeout(resolve, 800));
+            this.audio.pause();
+            if (i < 1) await new Promise(resolve => setTimeout(resolve, 200));
+        }
+    }
+}
+
+// 啟動應用
+document.addEventListener('DOMContentLoaded', () => {
+    window.app = new App();
 });

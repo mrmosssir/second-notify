@@ -7,36 +7,116 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>倒數計時器</h1>
-        
-        <div class="settings">
-            <div class="input-group">
-                <label for="totalTime">倒數時間 (秒):</label>
-                <input type="number" id="totalTime" min="1" value="60">
+    <div class="app-wrapper">
+        <!-- 側邊欄 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>計時工具箱</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="active">
+                        <a href="#" id="fishTimerLink">
+                            <span class="icon">🐟</span> 魚屋計時器
+                        </a>
+                    </li>
+                    <li class="disabled">
+                        <a href="#" id="kunlaTimerLink">
+                            <span class="icon">💤</span> 困拉計時器
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- 主內容區 -->
+        <main class="main-content">
+            <!-- 魚屋計時器頁面 -->
+            <div id="fish-page" class="page-container active">
+                <div class="container">
+                    <div class="settings">
+                        <div class="input-group">
+                            <label for="totalTime">倒數時間 (秒):</label>
+                            <input type="number" id="totalTime" min="1" value="60">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="notifyTime">提醒時間 (秒):</label>
+                            <input type="number" id="notifyTime" min="1" value="10">
+                        </div>
+
+                        <div class="input-group full-width">
+                            <label for="notifyText">提醒文字 (語音):</label>
+                            <input type="text" id="notifyText" placeholder="例如：小怪出現了" value="小怪">
+                        </div>
+                    </div>
+
+                    <div class="timer-display">
+                        <div class="time" id="timeDisplay">00:00</div>
+                        <div class="progress-bar">
+                            <div class="progress" id="progress"></div>
+                        </div>
+                    </div>
+
+                    <div class="controls">
+                        <button id="startBtn" class="btn start">開始</button>
+                        <button id="pauseBtn" class="btn pause" disabled>暫停</button>
+                        <button id="resetBtn" class="btn reset">重置</button>
+                    </div>
+
+                    <div class="status" id="status">準備就緒</div>
+                </div>
+            </div>
+
+            <!-- 困拉計時器頁面 -->
+            <div id="kunla-page" class="page-container">
+                <div id="timers-grid" class="timers-grid">
+                    <!-- 計時器卡片將由 JavaScript 動態生成 -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 計時器卡片模板 (用於動態生成) -->
+    <template id="timer-card-template">
+        <div class="timer-card">
+            <!-- 左側：時間與進度條 -->
+            <div class="timer-card-left">
+                <div class="timer-card-time">00:00</div>
+                <div class="progress-bar">
+                    <div class="progress"></div>
+                </div>
             </div>
             
-            <div class="input-group">
-                <label for="notifyTime">提醒時間 (秒):</label>
-                <input type="number" id="notifyTime" min="1" value="10">
+            <!-- 右側：名稱、設定與控制 -->
+            <div class="timer-card-right">
+                <div class="timer-card-header">
+                    <h3 class="timer-name">計時器名稱</h3>
+                </div>
+                
+                <div class="timer-card-settings">
+                    <div class="mini-input-group">
+                        <label>總秒數</label>
+                        <input type="number" class="input-total" min="1">
+                    </div>
+                    <div class="mini-input-group">
+                        <label>提醒秒</label>
+                        <input type="number" class="input-notify" min="0">
+                    </div>
+                </div>
+                
+                <div class="timer-card-text">
+                    <input type="text" class="input-text" placeholder="語音內容">
+                </div>
+                
+                <div class="timer-card-controls">
+                    <button class="btn-mini start">開始</button>
+                    <button class="btn-mini pause" disabled>暫停</button>
+                    <button class="btn-mini reset">重置</button>
+                </div>
             </div>
         </div>
-
-        <div class="timer-display">
-            <div class="time" id="timeDisplay">00:00</div>
-            <div class="progress-bar">
-                <div class="progress" id="progress"></div>
-            </div>
-        </div>
-
-        <div class="controls">
-            <button id="startBtn" class="btn start">開始</button>
-            <button id="pauseBtn" class="btn pause" disabled>暫停</button>
-            <button id="resetBtn" class="btn reset">重置</button>
-        </div>
-
-        <div class="status" id="status">準備就緒</div>
-    </div>
+    </template>
 
     <audio id="notificationSound" preload="auto">
         <source src="bell-sound.mp3" type="audio/mpeg">
