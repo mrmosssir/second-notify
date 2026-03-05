@@ -479,10 +479,15 @@ h1 {
 
 /* 響應式設計修正 */
 @media (max-width: 600px) {
+    .settings {
+        grid-template-columns: 1fr;
+    }
+
     .timer-card {
         flex-direction: column;
         gap: 20px;
         text-align: center;
+        padding: 24px 16px;
     }
     
     .timer-card-left {
@@ -492,6 +497,10 @@ h1 {
     .timer-card-right {
         width: 100%;
         text-align: center;
+    }
+
+    .timer-card-settings {
+        grid-template-columns: 1fr;
     }
 }
 

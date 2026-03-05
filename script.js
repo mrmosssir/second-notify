@@ -91,7 +91,7 @@ class Timer {
         this.currentTime = newCurrentTime;
         
         // 提醒邏輯
-        if (this.currentTime <= this.notifyTime && !this.hasNotified && this.currentTime > 0) {
+        if (this.currentTime <= this.notifyTime && !this.hasNotified && this.currentTime >= 0) {
             if (this.onNotify) this.onNotify(this.notifyText);
             this.hasNotified = true;
             if (this.elements.display) this.elements.display.classList.add('warning');
@@ -143,7 +143,6 @@ class App {
     constructor() {
         this.timers = [];
         this.worker = null;
-        this.audio = document.getElementById('notificationSound');
         
         this.initWorker();
         this.initNavigation();
@@ -220,8 +219,9 @@ class App {
         
         const config = [
             { name: "時鐘倒數", total: 10, notify: 0, text: "" },
+            { name: "炸彈", total: 30, notify: 0, text: "炸彈注意" },
             { name: "二樓小怪", total: 50, notify: 0, text: "二樓小怪生成" },
-            { name: "黑水", total: 70, notify: 10, text: "黑水剩餘10秒" }
+            { name: "黑水", total: 70, notify: 10, text: "黑水剩餘10秒" },
         ];
         
         config.forEach(item => {
@@ -275,15 +275,6 @@ class App {
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'zh-TW';
             window.speechSynthesis.speak(utterance);
-        }
-
-        // 鈴聲
-        for (let i = 0; i < 2; i++) {
-            this.audio.currentTime = 0;
-            try { await this.audio.play(); } catch(e) {}
-            await new Promise(resolve => setTimeout(resolve, 800));
-            this.audio.pause();
-            if (i < 1) await new Promise(resolve => setTimeout(resolve, 200));
         }
     }
 }
